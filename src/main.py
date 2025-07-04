@@ -649,7 +649,7 @@ class ModpackCard:
             width=card_width,
             height=card_height,
             bgcolor=ft.Colors.TRANSPARENT,
-            # blur=ft.BlurTileMode.MIRROR# Очень тёмно-фиолетовый фон карточки
+            blur=ft.Blur(2,2,ft.BlurTileMode.MIRROR)
         )
 
     def launch_minecraft(self):
@@ -664,16 +664,23 @@ class ModpackCard:
 def main(page: ft.Page):
     try:
         page.padding=2
-        page.adaptive = True
         page.title = "InnLab³ Launcher"
-        page.vertical_alignment = ft.MainAxisAlignment.CENTER
+        page.window.width=800
+        page.window.height=600
+        page.window.resizable=False
+        page.window.icon="InnLabIcon.png"
         pagebg = ft.Container(
                 content=ft.Image(
-                    src="InnLabIcon.jpg",
-                    fit=ft.ImageFit.FILL
+                    src="InnLabIconMax.png",
+                    fit=ft.ImageFit.CONTAIN
                 ),
-                expand=True
-            )
+                alignment=ft.alignment.center,
+                width=150,
+                height=150,
+                border_radius=150,
+                clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+
+        )
         config_path = "config.json"
         config = load_config(config_path)
 
@@ -761,27 +768,33 @@ def main(page: ft.Page):
                 cards = [
                     ModpackCard(page, "icon.png", "ArcanaTech", "Main mods:\nCreate\nMana and Artiface\nArs Noveau", '1.20.1', 20250630, 1),
                 ]
-                page.add(pagebg)
                 
                 page.add(
                     ft.Container(
-                        ft.Column(
-                            [
-                                ft.Row(
-                                    [card.create_card(show_main_screen, show_settings_screen) for card in cards],
-                                    spacing=50,
-                                    alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                    scroll=ft.ScrollMode.AUTO,
-                                    offset=ft.Offset(0.1,0)
-                                )
-                            ],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                        bgcolor=ft.Colors.TRANSPARENT,
-                    )
-                )
+                        ft.Stack([
+                        pagebg,
+                        ft.Container(
+                            ft.Row(
+                            [card.create_card(show_main_screen, show_settings_screen) for card in cards],
+                            spacing=50,
+                            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            scroll=ft.ScrollMode.AUTO,
+                            offset=ft.Offset(0.1,0),
+                            expand=True
+                            ),
+                            alignment=ft.alignment.center_left,
+                            blur=ft.Blur(2,2,ft.BlurTileMode.MIRROR)
+                        )
+                        ],
+                    alignment=ft.alignment.center,
+                    expand=True
+                    ),
+                    bgcolor=ft.Colors.TRANSPARENT,
+                    expand=True
+                    )  
+                ) 
+                
                 page.update()
             except Exception as ex:
                 print(f"Ошибка в show_main_screen: {ex}")
