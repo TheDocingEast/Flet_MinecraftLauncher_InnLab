@@ -36,8 +36,8 @@ A modern, feature-rich Minecraft launcher built with Python and Flet, designed f
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd VCS_testflet
+   git clone https://github.com/TheDocingEast/Flet_MinecraftLauncher_InnLab.git
+   cd Flet_MinecraftLauncher_InnLab
    ```
 
 2. **Install dependencies**:
@@ -49,19 +49,6 @@ A modern, feature-rich Minecraft launcher built with Python and Flet, designed f
    ```bash
    python src/main.py
    ```
-
-### Building Executable
-
-To create a standalone executable:
-
-```bash
-# Windows
-build_launcher.bat
-
-# Linux/macOS
-chmod +x build_launcher.sh
-./build_launcher.sh
-```
 
 ## Configuration
 
@@ -96,7 +83,7 @@ The launcher uses a `config.json` file for settings:
 ## Project Structure
 
 ```
-VCS_testflet/
+VCS_Flet_MinecraftLauncher_InnLab/
 ├── src/
 │   ├── main.py          # Main application entry point
 │   ├── launcher.py      # Minecraft launcher logic
@@ -106,8 +93,7 @@ VCS_testflet/
 ├── dist/                # Built executables
 ├── minecraft/           # Minecraft installation directory
 ├── config.json          # Configuration file
-├── requirements.txt     # Python dependencies
-└── build_launcher.bat   # Build script
+└── requirements.txt     # Python dependencies
 ```
 
 ## Development
@@ -140,14 +126,6 @@ The launcher follows a modular architecture:
 3. Make your changes with proper error handling and logging
 4. Add tests if applicable
 5. Submit a pull request
-
-### Code Style
-
-- Follow PEP 8 guidelines
-- Use type hints for all functions
-- Include comprehensive docstrings
-- Add proper error handling with logging
-- Maintain backward compatibility where possible
 
 ## Troubleshooting
 
@@ -199,6 +177,6 @@ For support, please:
 
 ---
 
-**Version**: 2.0.0  
-**Last Updated**: 2024  
+**Version**: 0.1.0  
+**Last Updated**: 2025  
 **Compatibility**: Python 3.8+, Windows/macOS/Linux
