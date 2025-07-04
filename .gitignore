@@ -1,0 +1,12 @@
+# Игнорируемые папки
+/logs/
+/dist/
+/minecraft/
+/buildlaunch/
+/CustomSkinLoader/
+
+# Игнорируемые файлы
+*.json
+*.log
+**/*.log
+
