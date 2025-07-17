@@ -1,7 +1,8 @@
 import minecraft_launcher_lib as mclib
 import subprocess
 import logging
-import threading
+# Импортируем необходимые функции из main
+from main import load_config, max_progress_bar, current_progress_bar, status_progress_bar
 from threading import Lock
 import os
 import json
@@ -10,6 +11,13 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import sys
 import time
+# Изменяем импорт для правильного доступа к функциям
+from main import load_config
+
+# Initialize progress tracking
+_progress_max = 0
+_progress_status = ""
+_progress_current = 0
 
 # Configure logging with UTF-8 encoding
 logging.basicConfig(
@@ -50,6 +58,8 @@ class MinecraftLauncher:
         }
         
         try:
+            config_data = load_config("config.json")
+            actual_username = config_data.get("nickname", USERNAME)
             if Path(self.config_path).exists():
                 with open(self.config_path, 'r', encoding='utf-8') as f:
                     file_config = json.load(f)
@@ -154,7 +164,7 @@ def ensure_customskinloader(minecraft_dir, mc_version='1.20.1', loader='fabric')
                         else:
                             logger.info('CustomSkinLoader уже установлен.')
                         return
-        logger.error(f'Не удалось найти ��одходящую версию CustomSkinLoader для вашей версии Minecraft и лоадера {loader}.')
+        logger.error(f'Не удалось найти подходящую версию CustomSkinLoader для вашей версии Minecraft и лоадера {loader}.')
     except Exception as e:
         logger.error(f'Ошибка при работе с Modrinth API: {e}')
 
@@ -192,7 +202,7 @@ def get_fabric_loader_version_safe():
         logger.info(f'Используем резервную версию Fabric loader: {fallback_version}')
         return fallback_version
 
-def launch_game(index: int):
+def launch_game():
     global is_game_running, game_process
     try:
         with game_lock:
@@ -207,7 +217,14 @@ def launch_game(index: int):
         except Exception as e:
             logger.warning(f'Не удалось установить CustomSkinLoader: {e}')
 
-        logger.info(f'Запуск Minecraft для пользователя: {USERNAME}')
+        # Получаем актуальный никнейм из конфига
+        try:
+            config_data = load_config("config.json")
+            actual_username = config_data.get("nickname", USERNAME)
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить конфиг: {e}")
+            actual_username = USERNAME
+        logger.info(f'Запуск Minecraft для пользователя: {actual_username}')
         
         # Безопасное пол��чение версии Fabric loader
         fabric_loader = get_fabric_loader_version_safe()
@@ -243,7 +260,18 @@ def launch_game(index: int):
         except Exception as e:
             logger.warning(f'Ошибка при установке Minecraft: {e}')
         
+        # Загружаем никнейм из конфига через импортированную функцию
+        try:
+            config_data = load_config("config.json")
+            nickname = config_data.get("nickname", USERNAME)
+            ram_value = config_data.get("ram", MEMORY_GB)
+        except Exception as ex:
+            logger.warning(f"Не удалось загрузить конфиг, используем значения по умолчанию: {ex}")
+            nickname = USERNAME
+            ram_value = MEMORY_GB
+        
         options = {
+            "username": nickname,
             "username": USERNAME,
             "uuid": "",
             "token": "",
@@ -267,12 +295,17 @@ def launch_game(index: int):
                 # Устанавливаем vanilla версию если Fabric не работает
                 mclib.install.install_minecraft_version(
                     MINECRAFT_VERSION,
-                    minecraft_directory=MINECRAFT_DIR
+                    minecraft_directory=MINECRAFT_DIR,
+                    callback = {
+                        "setStatus": lambda value: status_progress_bar(None, value),
+                        "setProgress": lambda value: current_progress_bar(None, value),
+                        "setMax": lambda value: max_progress_bar(None, value)
+                    }
                 )
                 command = mclib.command.get_minecraft_command(
                     MINECRAFT_VERSION,
                     MINECRAFT_DIR,
-                    options
+                    options,
                 )
                 logger.info('Команда запуска vanilla создана успешно')
             except Exception as e2:

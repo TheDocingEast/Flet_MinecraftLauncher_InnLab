@@ -9,6 +9,26 @@ import threading
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
+import launcher
+
+# Define callback functions for launcher progress
+# Глобальные переменные для отслеживания прогресса
+_progress_max = 0
+_progress_status = ""
+_progress_current = 0
+
+# Простые callback функции для отслеживания прогресса
+def max_progress_bar(ev=None, value: int=0):
+    global _progress_max
+    _progress_max = value
+    
+def status_progress_bar(ev=None, value: str=''):
+    global _progress_status
+    _progress_status = value
+    
+def current_progress_bar(ev=None, value: int=0):
+    global _progress_current
+    _progress_current = value
 
 # Configure logging
 logging.basicConfig(
@@ -205,68 +225,55 @@ class ModpackCard:
                         visible=False
                     )
                     
-                    def update_launch_progress(progress_value: float, status_text: str = ""):
+                    # Initialize progress tracking properties
+                    self.maxprogressbar = 0
+                    self.currentprogressbar = 0
+                    self.statusprogressbar = ""
+                        
+                    
+                    def update_launch_progress(ev):
                         """Обновляет прогресс бар запуска"""
                         try:
+                            # Получаем актуальные значения из глобальных переменных
+                            global _progress_max, _progress_status, _progress_current
+                            self.maxprogressbar = _progress_max
+                            self.statusprogressbar = _progress_status
+                            self.currentprogressbar = _progress_current
+                            
+                            # Вычисляем значение прогресса
+                            progress_value = self.currentprogressbar / self.maxprogressbar if self.maxprogressbar else 0
+                            
+                            # Обновляем интерфейс
                             launch_progress.value = progress_value
                             launch_progress.visible = progress_value > 0
-                            if hasattr(self.page, 'bottom_appbar') and self.page.bottom_appbar:
-                                # Обновляем текст статуса кнопки "Играть"
-                                # Ищем в структуре Column -> Row -> кнопки
-                                content = self.page.bottom_appbar.content
-                                if hasattr(content, 'controls') and len(content.controls) > 1:
-                                    row_controls = content.controls[1]  # Вторая строка с кнопками
-                                    if hasattr(row_controls, 'controls'):
-                                        for control in row_controls.controls:
-                                            if hasattr(control, 'text') and control.text in ["Играть", "Подготовка...", "Проверка файлов...", "Загрузка модов...", "Инициализация Java...", "Запуск Minecraft...", "Запущено!"]:
-                                                if progress_value > 0 and progress_value < 1:
-                                                    control.text = status_text if status_text else f"Запуск... {int(progress_value * 100)}%"
-                                                else:
-                                                    control.text = "Играть"
-                                                break
+                            
+                            # Находим кнопку "Играть" и обновляем её текст
+                            play_button = self.page.bottom_appbar.content.controls[1].controls[-1]
+                            if progress_value > 0 and progress_value < 1:
+                                play_button.text = self.statusprogressbar or "Загрузка..."
+                            else:
+                                play_button.text = "Играть"
+                                
                             self.page.update()
                         except Exception as e:
                             logger.error(f"Ошибка обновления прогресса: {e}")
                     
                     def launch_game(ev):
                         try:
-                            # Показываем прогресс запуска
-                            update_launch_progress(0.1, "Подготовка...")
-                            
-                            # Симуляция этапов запуска
-                            def launch_process():
-                                try:
-                                    update_launch_progress(0.2, "Проверка файлов...")
+                            # Запускаем таймер для обновления прогресс-бара
+                            def progress_updater():
+                                while _progress_max > 0 and _progress_current < _progress_max:
+                                    update_launch_progress(None)
                                     time.sleep(0.5)
-                                    
-                                    update_launch_progress(0.4, "Загрузка модов...")
-                                    time.sleep(0.8)
-                                    
-                                    update_launch_progress(0.6, "Инициализация Java...")
-                                    time.sleep(0.5)
-                                    
-                                    update_launch_progress(0.8, "Запуск Minecraft...")
-                                    time.sleep(0.3)
-                                    
-                                    # Запускаем игру
-                                    self.launch_minecraft()
-                                    
-                                    update_launch_progress(1.0, "Запущено!")
-                                    time.sleep(1)
-                                    
-                                    # Скрываем прогресс бар
-                                    update_launch_progress(0, "")
-                                    
-                                    print(f"Запуск игры для {current_nickname} в сборке {self.name}")
-                                except Exception as ex:
-                                    update_launch_progress(0, "")
-                                    print(f"Ошибка запуска игры: {ex}")
                             
-                            # Запускаем в ��тдельном потоке
-                            threading.Thread(target=launch_process, daemon=True).start()
+                            # Запускаем поток обновления прогресса
+                            progress_thread = threading.Thread(target=progress_updater, daemon=True)
+                            progress_thread.start()
                             
+                            # Запускаем Minecraft
+                            launcher.launch_game()
+                            print(f"Запуск игры для {current_nickname} в сборке {self.name}")
                         except Exception as ex:
-                            update_launch_progress(0, "")
                             print(f"Ошибка запуска игры: {ex}")
                     
                     def check_updates(ev):
@@ -456,7 +463,7 @@ class ModpackCard:
                                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                                 content=ft.Container(
                                     content=log_container,
-                                    bgcolor=ft.Colors(0.98, ft.Colors.BLACK),
+                                    bgcolor=ft.Colors.BLACK12,
                                     padding=ft.padding.all(15),
                                     border_radius=ft.border_radius.all(8),
                                     border=ft.border.all(1, ft.Colors.PURPLE_400)
@@ -471,7 +478,7 @@ class ModpackCard:
                                         )
                                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                                 ],
-                                bgcolor=ft.Colors(0.98, ft.Colors.BLACK),
+                                bgcolor=ft.Colors.BLACK,
                                 actions_alignment=ft.MainAxisAlignment.END
                             )
                             
@@ -643,7 +650,7 @@ class ModpackCard:
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            border=ft.border.all(2, "#492058"),  # Очень тёмная фи��летовая граница
+            border=ft.border.all(2, "#492058"),  # Очень тёмная фиолетовая граница
             border_radius=ft.border_radius.all(8),
             padding=ft.padding.all(20),
             width=card_width,
@@ -652,14 +659,6 @@ class ModpackCard:
             blur=ft.Blur(2,2,ft.BlurTileMode.MIRROR)
         )
 
-    def launch_minecraft(self):
-        try:
-            if os.path.exists('src/launcher.py'):
-                subprocess.Popen([sys.executable, 'src/launcher.py'])
-            else:
-                print("Файл launcher.py не найден")
-        except Exception as e:
-            print(f"Ошибка запуска Minecraft: {e}")
 
 def main(page: ft.Page):
     try:
